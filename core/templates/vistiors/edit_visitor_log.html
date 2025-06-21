@@ -1,0 +1,67 @@
+{# templates/visitors/edit_visitor_log.html #}
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Edit Visitor Log{% endblock %}
+
+{% block content %}
+<div class="min-h-screen p-4 md:p-6 lg:p-8">
+    <header class="mb-5 md:mb-6">
+        <h1 class="text-3xl font-extrabold text-gray-900 leading-tight">Edit Visitor Entry</h1>
+        <p class="text-base text-gray-600 mt-1">Modifying record for {{ visitor_entry.visitor_name }} on {{ visitor_entry.visit_date|date:"Y-m-d" }}.</p>
+    </header>
+
+    <section class="card mb-5">
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                    <label for="{{ form.visitor_name.id_for_label }}" class="block text-sm font-medium text-gray-700">Visitor Name</label>
+                    {{ form.visitor_name }}
+                    {% if form.visitor_name.errors %}<p class="text-red-500 text-xs italic">{{ form.visitor_name.errors }}</p>{% endif %}
+                </div>
+                <div>
+                    <label for="{{ form.organization.id_for_label }}" class="block text-sm font-medium text-gray-700">Organization</label>
+                    {{ form.organization }}
+                    {% if form.organization.errors %}<p class="text-red-500 text-xs italic">{{ form.organization.errors }}</p>{% endif %}
+                </div>
+                <div>
+                    <label for="{{ form.purpose.id_for_label }}" class="block text-sm font-medium text-gray-700">Purpose of Visit</label>
+                    {{ form.purpose }}
+                    {% if form.purpose.errors %}<p class="text-red-500 text-xs italic">{{ form.purpose.errors }}</p>{% endif %}
+                </div>
+                <div>
+                    <label for="{{ form.visit_date.id_for_label }}" class="block text-sm font-medium text-gray-700">Date</label>
+                    {{ form.visit_date }}
+                    {% if form.visit_date.errors %}<p class="text-red-500 text-xs italic">{{ form.visit_date.errors }}</p>{% endif %}
+                </div>
+                <div>
+                    <label for="{{ form.time_in.id_for_label }}" class="block text-sm font-medium text-gray-700">Time In</label>
+                    {{ form.time_in }}
+                    {% if form.time_in.errors %}<p class="text-red-500 text-xs italic">{{ form.time_in.errors }}</p>{% endif %}
+                </div>
+                <div>
+                    <label for="{{ form.time_out.id_for_label }}" class="block text-sm font-medium text-gray-700">Time Out</label>
+                    {{ form.time_out }}
+                    {% if form.time_out.errors %}<p class="text-red-500 text-xs italic">{{ form.time_out.errors }}</p>{% endif %}
+                </div>
+            </div>
+            {% if form.non_field_errors %}<div class="text-red-500 text-sm">{{ form.non_field_errors }}</div>{% endif %}
+            <button type="submit" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-md shadow-sm transition duration-300 ease-in-out">
+                Save Changes
+            </button>
+            <a href="{% url 'visitor_log_list' %}" class="ml-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-md shadow-sm transition duration-300 ease-in-out">
+                Cancel
+            </a>
+        </form>
+    </section>
+</div>
+{% endblock %}
+
+{# templates/visitors/confirm_delete.html #}
+{% comment %}
+    This template is used for a simple confirmation page before deleting.
+    However, for a quick demo, an `onclick="return confirm('Are you sure?');"`
+    on the delete button in the list view (as implemented in visitor_log.html)
+    is often sufficient and avoids an extra page load.
+{% endcomment %}

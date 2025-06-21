@@ -1,0 +1,443 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_head %}
+    <!-- Chart.js CDN for graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+    <!-- Dashboard Header -->
+    <header class="mb-5 md:mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+        <div>
+            <h1 class="text-3xl font-extrabold text-gray-900 leading-tight">Housing Finance Bank - DCIM Dashboard</h1>
+            <p class="text-base text-gray-600 mt-1">Welcome, {{ request.user.username }} (Infrastructure Manager)</p>
+        </div>
+        <div class="mt-3 sm:mt-0 text-right flex items-center space-x-4">
+            <div>
+                <span class="text-xs font-medium text-gray-500 block">Last Updated:</span>
+                <span class="text-sm font-semibold text-gray-700 block" id="last-updated"></span>
+            </div>
+            <button id="generatePdfBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1.5 px-3 rounded-md shadow-sm text-sm transition duration-300 ease-in-out">
+                Generate PDF Report
+            </button>
+            <form action="{% url 'logout' %}" method="post" class="inline">
+                {% csrf_token %}
+                <button type="submit" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-1.5 px-3 rounded-md shadow-sm text-sm transition duration-300 ease-in-out">
+                    Logout
+                </button>
+            </form>
+        </div>
+    </header>
+
+    <!-- Overall Data Centre Summary -->
+    <section class="card mb-5">
+        <h2 class="text-xl font-bold text-gray-800 mb-3 flex items-center">
+            <svg class="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 12a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1v-2zM4 19a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1v-2z"></path></svg>
+            Data Centre Overview
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                <p class="text-sm font-medium text-gray-500">Total Racks</p>
+                <p class="text-xl font-bold text-gray-900">{{ total_racks }}</p>
+            </div>
+            <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                <p class="text-sm font-medium text-gray-500">Contracted Power</p>
+                <p class="text-xl font-bold text-gray-900">{{ contracted_power_kw }} kW</p>
+            </div>
+            <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                <p class="text-sm font-medium text-gray-500">Current Total Load</p>
+                <p class="text-xl font-bold text-blue-600" id="currentOverallLoad">{{ current_total_load }} kW</p>
+            </div>
+            <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                <p class="text-sm font-medium text-gray-500">Active Alerts</p>
+                <p class="text-xl font-bold text-orange-500">{{ active_alerts }} Warnings</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Power Usage Analytics Section with Doughnut Graphs -->
+    <section class="card mb-5">
+        <h2 class="text-xl font-bold text-gray-800 mb-3 flex items-center">
+            <svg class="w-6 h-6 mr-2 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m-4 8h4m10-8h4m-4 8h4M7 8a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+            Power Usage Analytics
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Overall Power Usage Doughnut Chart -->
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-100 relative flex flex-col justify-center items-center">
+                <p class="text-sm font-medium text-gray-500 mb-1">Total Power Utilization</p>
+                <div class="chart-container-doughnut max-w-xs h-48 w-48 mx-auto">
+                    <canvas id="totalPowerChart"></canvas>
+                    <div class="chart-value-overlay text-xl" id="totalPowerValue"></div>
+                    <div class="chart-label-overlay text-sm">kW Used</div>
+                </div>
+                <p class="text-center text-sm font-bold text-gray-900 mt-2">
+                    <span id="currentTotalPower">{{ current_total_load }}</span> kW out of {{ contracted_power_kw }} kW
+                </p>
+            </div>
+            <!-- Individual Rack Power Usage Doughnut Charts -->
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                <p class="text-sm font-medium text-gray-500 mb-1">Individual Rack Power Use</p>
+                <div class="grid grid-cols-2 gap-3">
+                    {% for rack in all_racks %}
+                    <div class="relative w-full aspect-square flex flex-col items-center">
+                        <div class="chart-container-doughnut w-32 h-32 mx-auto">
+                            <canvas id="rack{{ rack.id }}PowerChart"></canvas>
+                            <div class="chart-value-overlay text-base" id="rack{{ rack.id }}PowerValue"></div>
+                            <div class="chart-label-overlay text-xs">{{ rack.name }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                 <p class="text-sm text-gray-500 mt-4 text-left">
+                    <span class="font-bold">Key:</span>
+                    <span class="status-dot green"></span> <span class="font-medium text-green-600">Optimal (&lt;80%)</span>
+                    <span class="status-dot orange ml-2"></span> <span class="font-medium text-orange-500">Warning (80-95%)</span>
+                    <span class="status-dot red ml-2"></span> <span class="font-medium text-red-500">Critical (>95%)</span>
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Detailed Rack Status -->
+    <section class="mb-5 card">
+        <h2 class="text-xl font-bold text-gray-800 mb-3 flex items-center">
+            <svg class="w-6 h-6 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+            Detailed Rack Status
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-4">
+            {% for rack in all_racks %}
+            <div class="card">
+                <h3 class="text-lg font-bold text-gray-800 mb-2 flex items-center">
+                    <svg class="w-5 h-5 mr-1 {% if rack.power_utilization_percentage < 80 and rack.current_inlet_temp < 30 %}text-indigo-500{% elif rack.power_utilization_percentage < 95 and rack.current_inlet_temp < 40 %}text-orange-500{% else %}text-red-500{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v4m0 0l-3-3m3 3l3-3"></path></svg>
+                    {{ rack.name }}
+                </h3>
+                <div class="flex items-center text-base mb-2">
+                    <span class="status-dot {% if rack.power_utilization_percentage < 80 and rack.current_inlet_temp < 30 %}green{% elif rack.power_utilization_percentage < 95 and rack.current_inlet_temp < 40 %}orange{% else %}red{% endif %}"></span>
+                    <span class="font-semibold {% if rack.power_utilization_percentage < 80 and rack.current_inlet_temp < 30 %}text-green-600{% elif rack.power_utilization_percentage < 95 and rack.current_inlet_temp < 40 %}text-orange-500{% else %}text-red-500{% endif %}">
+                        {% if rack.power_utilization_percentage > 95 or rack.current_inlet_temp > 40 %}Critical{% elif rack.power_utilization_percentage > 80 or rack.current_inlet_temp > 28 %}Warning{% else %}Operational{% endif %}
+                    </span>
+                </div>
+                <div class="detailed-rack-metrics">
+                    <ul>
+                        <li><span>Power Draw:</span> <span id="detailedRack{{ rack.id }}Power">{{ rack.used_power_kw|floatformat:1 }} kW</span></li>
+                        <li><span>Inlet Temp:</span> <span id="detailedRack{{ rack.id }}Temp" class="{% if rack.current_inlet_temp > 28 %}text-orange-500{% endif %}">{{ rack.current_inlet_temp|floatformat:1 }}°C</span></li>
+                        <li><span>Humidity:</span> <span>{{ rack.current_humidity|floatformat:0 }}% RH</span></li>
+                        <li><span>Rack Units Used:</span> <span>{{ rack.used_units }}/{{ rack.total_units }}U</span></li>
+                        {% if "Comm" in rack.name %}
+                            <li><span>Network Traffic:</span> <span>85% Peak</span></li>
+                        {% elif "Servers" in rack.name %}
+                            <li><span>CPU Load (Avg):</span> <span>60%</span></li>
+                        {% elif "Storage" in rack.name %}
+                            <li><span>Disk I/O (Avg):</span> <span>40%</span></li>
+                        {% elif "DC/Fibre" in rack.name %}
+                            <li><span>Fibre ODF Ports Used:</span> <span>60/96</span></li>
+                            <li><span>DC Output Voltage:</span> <span>48.2 V</span></li>
+                        {% endif %}
+                    </ul>
+                </div>
+                <p class="text-xs text-gray-500 mt-2">
+                    {% if "Comm" in rack.name %}Contains core routing and switching infrastructure.
+                    {% elif "Servers" in rack.name %}Houses critical application and database servers.
+                    {% elif "Storage" in rack.name %}Dedicated storage arrays for enterprise data.
+                    {% elif "DC/Fibre" in rack.name %}Provides DC power and manages fibre optic cross-connects.
+                    {% endif %}
+                </p>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- Power Distribution to Racks -->
+    <section class="card mb-5">
+        <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <svg class="w-6 h-6 mr-2 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            Rack Power Distribution
+        </h2>
+        <div class="space-y-3">
+            {% for pdu in pdu_feeds %}
+            <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-100">
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    <span class="font-semibold text-gray-700 text-sm">{{ pdu.name }}</span>
+                </div>
+                <span class="text-base font-bold {% if pdu.status == 'Online' %}text-green-600{% elif pdu.status == 'Standby' %}text-orange-500{% else %}text-red-500{% endif %}">{{ pdu.status }}</span>
+            </div>
+            {% endfor %}
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                {% for rack in all_racks %}
+                <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                    <p class="text-sm font-medium text-gray-500">{{ rack.name }} Power Status</p>
+                    <p class="text-base font-bold text-green-600">Online</p> {# Simplified: assuming always online from PDU Feed 1 for demo #}
+                    <p class="text-xs text-gray-500">From PDU Feed 1</p>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+    <!-- Cross-Connects & Connectivity -->
+    <section class="card mb-5">
+        <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <svg class="w-6 h-6 mr-2 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 16h-1.5a1.5 1.5 0 01-1.5-1.5V13a3 3 0 00-3-3H5a2 2 0 00-2 2v1m15 0h-1.5a1.5 1.5 0 01-1.5-1.5V13a3 3 0 00-3-3H12a2 2 0 00-2 2v1m-3 0V7a1 1 0 00-1-1H4a1 1 0 00-1 1v2.586a1 1 0 00.293.707l1.414 1.414a1 1 0 00.707.293H7m9.586 0a1 1 0 00.707-.293l1.414-1.414A1 1 0 0021 9.586V7a1 1 0 00-1-1h-2.586a1 1 0 00-.707.293l-1.414 1.414A1 1 0 0015.414 12H17"></path></svg>
+            Network & Fibre Cross-Connects
+        </h2>
+        <div class="space-y-3">
+            {% for connect in cross_connects %}
+            <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                <p class="text-sm font-medium text-gray-500">{{ connect.name }}</p>
+                <p class="text-base font-bold text-gray-900">Status: {{ connect.status }} ({{ connect.connection_type }})</p>
+                <p class="text-xs text-gray-500">Port {{ connect.source }} <span class="font-semibold text-blue-600">⟷</span> Port {{ connect.destination }}</p>
+            </div>
+            {% endfor %}
+        </div>
+        <p class="text-sm text-gray-500 mt-4">
+            Visualizing key network and fibre interconnections within the data centre.
+        </p>
+    </section>
+
+    <!-- Environmental Conditions (Beyond just racks) -->
+    <section class="card mb-5">
+        <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <svg class="w-6 h-6 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h1M3 12H2m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+            Environmental Monitoring
+        </h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                <p class="text-sm font-medium text-gray-500">Room Ambient Temp</p>
+                <p class="text-xl font-bold text-gray-900">{{ room_ambient_temp }}°C</p>
+            </div>
+            <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                <p class="text-sm font-medium text-gray-500">Room Ambient Humidity</p>
+                <p class="text-xl font-bold text-gray-900">{{ room_ambient_humidity }}% RH</p>
+            </div>
+            <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                <p class="text-sm font-medium text-gray-500">CRAC Unit 1 Status</p>
+                <p class="text-xl font-bold text-green-600">{{ crac_unit1_status }}</p>
+            </div>
+            <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                <p class="text-sm font-medium text-gray-500">CRAC Unit 2 Status</p>
+                <p class="text-xl font-bold text-green-600">{{ crac_unit2_status }}</p>
+            </div>
+            <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                <p class="text-sm font-medium text-gray-500">Airflow Pressure</p>
+                <p class="text-xl font-bold text-gray-900">{{ airflow_pressure }} Pa</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Visitors Log -->
+    <section class="card">
+        <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <svg class="w-6 h-6 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h2a2 2 0 002-2V8a2 2 0 00-2-2h-2M3 18v-2a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H5a2 2 0 01-2-2zM9 16H9m8 0H9m4 0h.01M9 12H9m8 0h.01"></path></svg>
+            Data Centre Visitors Log (Last Month)
+        </h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">Date</th>
+                        <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Visitor Name</th>
+                        <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Organization</th>
+                        <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">Purpose</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for visitor in visitors %}
+                    <tr>
+                        <td class="px-4 py-2.5 whitespace-nowrap text-sm font-medium text-gray-900">{{ visitor.visit_date|date:"Y-m-d" }}</td>
+                        <td class="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">{{ visitor.visitor_name }}</td>
+                        <td class="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">{{ visitor.organization }}</td>
+                        <td class="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">{{ visitor.purpose }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600 text-center">No visitor logs found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-4 text-center">
+            <a href="{% url 'visitor_log_list' %}" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1.5 px-3 rounded-md shadow-sm text-sm transition duration-300 ease-in-out">
+                View/Manage All Visitor Logs
+            </a>
+        </div>
+    </section>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Data for charts (will be passed from Django context via JS)
+    const djangoRacksData = JSON.parse('{{ all_racks_json|escapejs }}');
+    // const totalContractedPower = {{ contracted_power_kw }};
+
+    // Function to update the "Last Updated" timestamp
+    function updateTimestamp() {
+        const now = new Date();
+        const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        document.getElementById('last-updated').innerText = now.toLocaleString('en-US', options) + ` ${timezone.split('/').pop().replace('_', ' ')}` || 'EAT';
+    }
+
+    // Function to update overall load display (Django context handles the initial load)
+    function updateOverallLoadDisplay() {
+        const currentTotal = djangoRacksData.reduce((sum, rack) => sum + rack.power, 0);
+        document.getElementById('currentTotalPower').textContent = `${currentTotal.toFixed(1)}`;
+        document.getElementById('currentOverallLoad').textContent = `${currentTotal.toFixed(1)} kW`;
+    }
+
+    // --- Chart.js Configuration for Doughnut Charts ---
+    let totalPowerChart, rackCharts = {}; // Use an object to store individual rack chart instances
+
+    // Custom plugin to draw text in the center of the doughnut chart
+    const centerTextPlugin = {
+        id: 'centerText',
+        beforeDraw: function(chart) {
+            if (chart.config.options.elements.center) {
+                const ctx = chart.ctx;
+                const centerConfig = chart.config.options.elements.center;
+                const fontStyle = centerConfig.fontStyle || 'bold';
+                const defaultFontSize = chart.height / 5;
+                const fontSize = centerConfig.fontSize || defaultFontSize;
+                const fontFamily = centerConfig.fontFamily || 'Inter, sans-serif';
+                const fontColor = centerConfig.fontColor || '#1f2937';
+
+                ctx.save();
+                ctx.font = `${fontStyle} ${fontSize}px ${fontFamily}`;
+                ctx.fillStyle = fontColor;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                const centerX = ((chart.chartArea.left + chart.chartArea.right) / 2);
+                const centerY = ((chart.chartArea.top + chart.chartArea.bottom) / 2);
+
+                ctx.fillText(text, centerX, centerY - (label ? fontSize * 0.75 / 2 : 0));
+                if (label) {
+                    ctx.font = `normal ${fontSize * 0.6}px ${fontFamily}`;
+                    ctx.fillStyle = '#6b7280';
+                    ctx.fillText(label, centerX, centerY + fontSize * 0.6);
+                }
+                ctx.restore();
+            }
+        }
+    };
+
+    Chart.register(centerTextPlugin);
+
+    function createDoughnutChart(ctx, value, maxValue, labelText, chartId) {
+        const percentage = (value / maxValue) * 100;
+        let color = '#22c55e'; // Green
+        if (percentage > 80 && percentage <= 95) {
+            color = '#f59e0b'; // Orange
+        } else if (percentage > 95) {
+            color = '#ef4444'; // Red
+        }
+
+        if (chartInstances[chartId]) {
+            chartInstances[chartId].destroy();
+        }
+
+        const newChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Used', 'Remaining'],
+                datasets: [{
+                    data: [value, maxValue - value],
+                    backgroundColor: [color, '#e5e7eb'],
+                    borderColor: '#ffffff',
+                    borderWidth: 2,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                elements: {
+                    center: {
+                        text: `${value.toFixed(1)} kW`,
+                        label: labelText
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed;
+                                const total = context.dataset.data.reduce((sum, current) => sum + current, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return `${label}: ${value.toFixed(1)} kW (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        chartInstances[chartId] = newChart;
+        return newChart;
+    }
+
+    function initializeAllCharts() {
+        // Overall Power Usage Chart
+        const currentTotal = djangoRacksData.reduce((sum, rack) => sum + rack.power, 0);
+        totalPowerChart = createDoughnutChart(
+            document.getElementById('totalPowerChart').getContext('2d'),
+            currentTotal,
+            totalContractedPower,
+            'Total Load',
+            'totalPowerChart'
+        );
+        document.getElementById('totalPowerValue').textContent = `${currentTotal.toFixed(1)} kW`;
+
+        // Individual Rack Power Usage Charts
+        djangoRacksData.forEach(rack => {
+            const chartId = `rack${rack.id}PowerChart`;
+            const valueId = `rack${rack.id}PowerValue`;
+            rackCharts[chartId] = createDoughnutChart(
+                document.getElementById(chartId).getContext('2d'),
+                rack.power,
+                rack.capacity,
+                rack.name,
+                chartId
+            );
+            document.getElementById(valueId).textContent = `${rack.power.toFixed(1)} kW`;
+        });
+
+        // Update detailed rack cards as well
+        djangoRacksData.forEach(data => {
+            const detailedPower = document.getElementById(`detailedRack${data.id}Power`);
+            const detailedTemp = document.getElementById(`detailedRack${data.id}Temp`);
+            if (detailedPower) detailedPower.textContent = `${data.power.toFixed(1)} kW`;
+            if (detailedTemp) {
+                detailedTemp.textContent = `${data.temp.toFixed(1)}°C`;
+                if (data.temp > 40) {
+                    detailedTemp.classList.add('text-orange-500');
+                } else {
+                    detailedTemp.classList.remove('text-orange-500');
+                }
+            }
+        });
+    }
+
+    // Placeholder for PDF generation
+    function generatePdfReport() {
+        alert('Generating PDF report for current DCIM status. This feature would involve a backend process.');
+        console.log('PDF report generation triggered.');
+        // In a real Django app, you'd make a fetch/XHR request to a Django view
+        // that generates the PDF using a library like ReportLab or WeasyPrint.
+        // Example: window.open('/dashboard/generate_pdf/', '_blank');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        updateTimestamp();
+        updateOverallLoadDisplay();
+        initializeAllCharts();
+
+        setInterval(updateTimestamp, 60 * 1000);
+
+        document.getElementById('generatePdfBtn').addEventListener('click', generatePdfReport);
+    });
+</script>
+{% endblock %}

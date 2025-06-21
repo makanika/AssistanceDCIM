@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>DCIM Report - {{ report_date|date:"Y-m-d" }}</title>
+    <style>
+        /* Embed PDF-specific CSS directly or link static/css/pdf.css */
+        /* For WeasyPrint, you can often link static files directly if STATIC_ROOT is configured correctly */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            font-size: 10pt;
+            margin: 1cm;
+            color: #1f2937;
+        }
+
+        h1 {
+            font-size: 18pt;
+            text-align: center;
+            margin-bottom: 20pt;
+            color: #1f2937;
+        }
+
+        h2 {
+            font-size: 14pt;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 5pt;
+            margin-top: 20pt;
+            margin-bottom: 10pt;
+            color: #1f2937;
+        }
+
+        h3 {
+            font-size: 12pt;
+            margin-bottom: 8pt;
+            color: #1f2937;
+        }
+
+        .card {
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+            page-break-inside: avoid; /* Prevent cards from breaking across pages if possible */
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+
+        th, td {
+            border: 1px solid #d1d5db;
+            padding: 8px;
+            text-align: left;
+            font-size: 9pt;
+        }
+
+        th {
+            background-color: #f3f4f6;
+            font-weight: bold;
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        .status-dot.green { background-color: #22c55e; }
+        .status-dot.orange { background-color: #f59e0b; }
+        .status-dot.red { background-color: #ef4444; }
+
+        .text-sm { font-size: 9pt; }
+        .text-xs { font-size: 8pt; }
+        .font-medium { font-weight: 500; }
+        .font-semibold { font-weight: 600; }
+        .font-bold { font-weight: 700; }
+        .text-gray-500 { color: #6b7280; }
+        .text-gray-900 { color: #1f2937; }
+        .text-blue-600 { color: #2563eb; }
+        .text-orange-500 { color: #f97316; }
+        .text-green-600 { color: #16a34a; }
+        .text-red-600 { color: #dc2626; }
+        .mb-2 { margin-bottom: 8pt; }
+        .mb-3 { margin-bottom: 12pt; }
+        .mb-4 { margin-bottom: 16pt; }
+        .mt-2 { margin-top: 8pt; }
+        .mt-3 { margin-top: 12pt; }
+        .mt-4 { margin-top: 16pt; }
+
+        ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+        li {
+            margin-bottom: 3pt;
+        }
+    </style>
+</head>
+<body>
+    <h1>DCIM Report - Housing Finance Bank</h1>
+    <p style="text-align: center; font-size: 10pt;">Generated on {{ report_date|date:"F j, Y" }} at {{ report_time }} EAT</p>
+    <hr style="border: none; border-top: 1px solid #ccc; margin: 20px 0;">
+
+    {% if include_overview %}
+    <section class="card">
+        <h2>Data Centre Overview</h2>
+        <table>
+            <tr>
+                <td>Total Racks:</td>
+                <td>{{ all_racks|length }}</td>
+            </tr>
+            <tr>
+                <td>Contracted Power:</td>
+                <td>{{ contracted_power_kw }} kW</td>
+            </tr>
+            <tr>
+                <td>Current Total Load:</td>
+                <td>{{ current_total_load|floatformat:1 }} kW</td>
+            </tr>
+            <tr>
+                <td>Active Alerts:</td>
+                <td>{{ active_alerts }} Warnings</td>
+            </tr>
+        </table>
+    </section>
+    {% endif %}
+
+    {% if include_power_analytics %}
+    <section class="card">
+        <h2>Power Usage Analytics</h2>
+        <p class="text-sm text-gray-500 mt-4 text-left mb-3">
+            <span class="font-bold">Key:</span>
+            <span class="status-dot green"></span> <span class="font-medium text-green-600">Optimal (&lt;80%)</span>
+            <span class="status-dot orange ml-2"></span> <span class="font-medium text-orange-500">Warning (80-95%)</span>
+            <span class="status-dot red ml-2"></span> <span class="font-medium text-red-500">Critical (>95%)</span>
+        </p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Rack Name</th>
+                    <th>Power Draw (kW)</th>
+                    <th>Utilization (%)</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rack in all_racks %}
+                <tr>
+                    <td>{{ rack.name }}</td>
+                    <td>{{ rack.used_power_kw|floatformat:1 }}</td>
+                    <td>{{ rack.power_utilization_percentage|floatformat:0 }}%</td>
+                    <td>
+                        <span class="status-dot {% if rack.power_utilization_percentage < 80 and rack.current_inlet_temp < 30 %}green{% elif rack.power_utilization_percentage < 95 and rack.current_inlet_temp < 40 %}orange{% else %}red{% endif %}"></span>
+                        {% if rack.power_utilization_percentage > 95 or rack.current_inlet_temp > 40 %}Critical{% elif rack.power_utilization_percentage > 80 or rack.current_inlet_temp > 28 %}Warning{% else %}Operational{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+    {% endif %}
+
+    {% if include_detailed_racks %}
+    <section class="card">
+        <h2>Detailed Rack Status</h2>
+        <div style="display: flex; flex-wrap: wrap; gap: 15px;">
+        {% for rack in all_racks %}
+            <div style="flex: 1 1 45%; min-width: 250px; border: 1px solid #eee; padding: 10px; border-radius: 5px;">
+                <h3>{{ rack.name }}</h3>
+                <ul>
+                    <li><span>Power Draw:</span> <span>{{ rack.used_power_kw|floatformat:1 }} kW</span></li>
+                    <li><span>Inlet Temp:</span> <span>{{ rack.current_inlet_temp|floatformat:1 }}°C</span></li>
+                    <li><span>Humidity:</span> <span>{{ rack.current_humidity|floatformat:0 }}% RH</span></li>
+                    <li><span>Rack Units Used:</span> <span>{{ rack.used_units }}/{{ rack.total_units }}U</span></li>
+                    {% if "Comm" in rack.name %}
+                        <li><span>Network Traffic:</span> <span>85% Peak</span></li>
+                    {% elif "Servers" in rack.name %}
+                        <li><span>CPU Load (Avg):</span> <span>60%</span></li>
+                    {% elif "Storage" in rack.name %}
+                        <li><span>Disk I/O (Avg):</span> <span>40%</span></li>
+                    {% elif "DC/Fibre" in rack.name %}
+                        <li><span>Fibre ODF Ports Used:</span> <span>60/96</span></li>
+                        <li><span>DC Output Voltage:</span> <span>48.2 V</span></li>
+                    {% endif %}
+                </ul>
+            </div>
+        {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if include_power_distribution %}
+    <section class="card">
+        <h2>Rack Power Distribution</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>PDU Feed</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pdu in pdu_feeds %}
+                <tr>
+                    <td>{{ pdu.name }}</td>
+                    <td>{{ pdu.status }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <p class="text-sm text-gray-500 mt-3">All racks are currently powered by PDU Feed 1.</p>
+    </section>
+    {% endif %}
+
+    {% if include_connectivity %}
+    <section class="card">
+        <h2>Network & Fibre Cross-Connects</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Connection</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Ports</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for connect in cross_connects %}
+                <tr>
+                    <td>{{ connect.name }}</td>
+                    <td>{{ connect.connection_type }}</td>
+                    <td>{{ connect.status }}</td>
+                    <td>{{ connect.source }} &harr; {{ connect.destination }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+    {% endif %}
+
+    {% if include_environment %}
+    <section class="card">
+        <h2>Environmental Monitoring</h2>
+        <table>
+            <tr>
+                <td>Room Ambient Temp:</td>
+                <td>{{ room_ambient_temp }}°C</td>
+            </tr>
+            <tr>
+                <td>Room Ambient Humidity:</td>
+                <td>{{ room_ambient_humidity }}% RH</td>
+            </tr>
+            <tr>
+                <td>CRAC Unit 1 Status:</td>
+                <td>{{ crac_unit1_status }}</td>
+            </tr>
+            <tr>
+                <td>CRAC Unit 2 Status:</td>
+                <td>{{ crac_unit2_status }}</td>
+            </tr>
+            <tr>
+                <td>Airflow Pressure:</td>
+                <td>{{ airflow_pressure }} Pa</td>
+            </tr>
+        </table>
+    </section>
+    {% endif %}
+
+    {% if include_visitors_log %}
+    <section class="card">
+        <h2>Data Centre Visitors Log (Last Month)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Visitor Name</th>
+                    <th>Organization</th>
+                    <th>Purpose</th>
+                    <th>Time In</th>
+                    <th>Time Out</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for visitor in visitors %}
+                <tr>
+                    <td>{{ visitor.visit_date|date:"Y-m-d" }}</td>
+                    <td>{{ visitor.visitor_name }}</td>
+                    <td>{{ visitor.organization|default_if_none:"N/A" }}</td>
+                    <td>{{ visitor.purpose }}</td>
+                    <td>{{ visitor.time_in|default_if_none:"N/A" }}</td>
+                    <td>{{ visitor.time_out|default_if_none:"N/A" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align: center;">No visitor logs found for the last month.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+    {% endif %}
+
+    <p style="text-align: center; font-size: 8pt; margin-top: 30pt;">
+        Housing Finance Bank DCIM Report - Confidential
+    </p>
+</body>
+</html>

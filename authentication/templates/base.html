@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DCIM - {% block title %}Dashboard{% endblock %}</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom scrollbar for a cleaner look */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; /* light gray */
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; /* darker gray */
+        }
+        /* Custom font import for consistency */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* bg-gray-100 */
+            color: #1f2937; /* gray-800 */
+        }
+        .card {
+            background-color: #ffffff;
+            border-radius: 0.75rem; /* rounded-xl */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-md */
+            padding: 1.25rem; /* p-5 */
+            border: 1px solid #e5e7eb; /* border-gray-200 */
+        }
+        .status-dot {
+            display: inline-block;
+            width: 0.75rem;
+            height: 0.75rem;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+        .status-dot.green { background-color: #22c55e; /* green-500 */ }
+        .status-dot.orange { background-color: #f59e0b; /* amber-500 */ }
+        .status-dot.red { background-color: #ef4444; /* red-500 */ }
+
+        /* Styles for Doughnut Chart container */
+        .chart-container-doughnut {
+            position: relative;
+            width: 100%;
+            padding-bottom: 100%; /* Aspect ratio 1:1 for perfect circle */
+        }
+        .chart-container-doughnut canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .chart-value-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem; /* text-2xl */
+            font-weight: bold;
+            color: #1f2937; /* gray-800 */
+            pointer-events: none; /* Allows clicks to pass through to canvas */
+        }
+        .chart-label-overlay {
+            position: absolute;
+            top: calc(50% + 1.5rem); /* Below the value */
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.875rem; /* text-sm */
+            color: #6b7280; /* gray-500 */
+            pointer-events: none;
+            white-space: nowrap; /* Prevent line breaks */
+        }
+
+        /* Specific adjustments for detailed rack bullets */
+        .detailed-rack-metrics ul {
+            list-style: none; /* Remove default bullet */
+            padding-left: 0;
+            margin-top: 0.75rem;
+        }
+        .detailed-rack-metrics li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.25rem; /* Tighter spacing */
+            font-size: 0.875rem; /* text-sm */
+            color: #4b5563; /* gray-700 */
+        }
+        .detailed-rack-metrics li span:first-child {
+            font-weight: 500; /* Medium weight for labels */
+            color: #6b7280; /* gray-500 */
+        }
+        .detailed-rack-metrics li span:last-child {
+            font-weight: 600; /* Semibold for values */
+            color: #1f2937; /* gray-800 */
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-gray-50 font-sans antialiased">
+    <div class="min-h-screen p-4 md:p-6 lg:p-8">
+        <!-- Messages Section -->
+        {% if messages %}
+            <div class="mb-4">
+                {% for message in messages %}
+                    <div class="p-3 mb-2 rounded-md {% if message.tags == 'success' %}bg-green-100 text-green-700{% elif message.tags == 'error' %}bg-red-100 text-red-700{% elif message.tags == 'info' %}bg-blue-100 text-blue-700{% elif message.tags == 'warning' %}bg-orange-100 text-orange-700{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

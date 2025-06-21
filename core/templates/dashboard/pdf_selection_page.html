@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Generate PDF Report{% endblock %}
+
+{% block content %}
+<div class="min-h-screen p-4 md:p-6 lg:p-8">
+    <header class="mb-5 md:mb-6">
+        <h1 class="text-3xl font-extrabold text-gray-900 leading-tight">Generate DCIM Report</h1>
+        <p class="text-base text-gray-600 mt-1">Select the sections you wish to include in the PDF report.</p>
+    </header>
+
+    <section class="card mb-5">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">Report Sections</h2>
+        <form method="post" action="{% url 'generate_pdf_report' %}" class="space-y-4">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <label class="flex items-center p-2 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer">
+                    <input type="checkbox" name="overview" value="true" checked class="form-checkbox h-4 w-4 text-indigo-600 transition duration-150 ease-in-out rounded">
+                    <span class="ml-2 text-sm text-gray-700">Data Centre Overview</span>
+                </label>
+                <label class="flex items-center p-2 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer">
+                    <input type="checkbox" name="power_analytics" value="true" checked class="form-checkbox h-4 w-4 text-indigo-600 transition duration-150 ease-in-out rounded">
+                    <span class="ml-2 text-sm text-gray-700">Power Usage Analytics</span>
+                </label>
+                <label class="flex items-center p-2 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer">
+                    <input type="checkbox" name="detailed_racks" value="true" checked class="form-checkbox h-4 w-4 text-indigo-600 transition duration-150 ease-in-out rounded">
+                    <span class="ml-2 text-sm text-gray-700">Detailed Rack Status</span>
+                </label>
+                <label class="flex items-center p-2 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer">
+                    <input type="checkbox" name="power_distribution" value="true" checked class="form-checkbox h-4 w-4 text-indigo-600 transition duration-150 ease-in-out rounded">
+                    <span class="ml-2 text-sm text-gray-700">Rack Power Distribution</span>
+                </label>
+                <label class="flex items-center p-2 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer">
+                    <input type="checkbox" name="connectivity" value="true" checked class="form-checkbox h-4 w-4 text-indigo-600 transition duration-150 ease-in-out rounded">
+                    <span class="ml-2 text-sm text-gray-700">Network & Fibre Cross-Connects</span>
+                </label>
+                <label class="flex items-center p-2 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer">
+                    <input type="checkbox" name="environment" value="true" checked class="form-checkbox h-4 w-4 text-indigo-600 transition duration-150 ease-in-out rounded">
+                    <span class="ml-2 text-sm text-gray-700">Environmental Monitoring</span>
+                </label>
+                <label class="flex items-center p-2 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer">
+                    <input type="checkbox" name="visitors_log" value="true" checked class="form-checkbox h-4 w-4 text-indigo-600 transition duration-150 ease-in-out rounded">
+                    <span class="ml-2 text-sm text-gray-700">Data Centre Visitors Log</span>
+                </label>
+            </div>
+            <div class="mt-6 flex justify-end space-x-3">
+                <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-md shadow-sm transition duration-300 ease-in-out">
+                    Generate PDF
+                </button>
+                <a href="{% url 'dashboard' %}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-md shadow-sm transition duration-300 ease-in-out">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}
