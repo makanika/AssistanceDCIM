@@ -14,7 +14,7 @@ def register_view(request):
             user = form.save()
             login(request, user)
             messages.success(request, "Account created and logged in successfully!")
-            return redirect('dashboard') # Redirect to dashboard after successful registration
+            return redirect('dashboard:index') # Redirect to dashboard after successful registration
     else:
         form = UserCreationForm()
     return render(request, 'authentication/register.html', {'form': form})
@@ -28,11 +28,13 @@ def login_view(request):
         if form.is_valid():
             user = form.get_user()
             login(request, user)
-            if 'next' in request.POST:
+            print("request: {}".format(request.POST))
+
+            if request.POST.get('next') and request.POST.get('next') != '':
                 return redirect(request.POST.get('next'))
             else:
                 messages.success(request, "Logged in successfully!")
-                return redirect('dashboard') # Redirect to dashboard after successful login
+                return redirect('dashboard:index') # Redirect to dashboard after successful login
         else:
             messages.error(request, "Invalid username or password.")
     else:
@@ -46,5 +48,5 @@ def logout_view(request):
     if request.method == 'POST':
         logout(request)
         messages.info(request, "Logged out successfully.")
-        return redirect('login') # Redirect to login page after logout
+        return redirect('authentication:auth_login') # Redirect to login page after logout
     return redirect('dashboard') # If not POST, just redirect to dashboard or login
